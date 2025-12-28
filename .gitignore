@@ -1,0 +1,20 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.vscode/
+
+# artifacts + data (these are symlinks to /ephemeral)
+data/
+checkpoints/
+results/
+logs/
+*.pt
+*.bin
+*.safetensors
+
+# caches (kept on /ephemeral)
+.cache/
+hf/
+datasets/
+transformers/

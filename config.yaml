@@ -1,0 +1,54 @@
+model:
+  name: "microsoft/deberta-v3-large"
+  num_labels: 5
+  classifier_dropout: 0.15
+  use_mean_pooling: true
+
+tokenizer:
+  max_length: 384
+  padding: "longest"
+  truncation: true
+
+training:
+  per_device_train_batch_size: 12
+  gradient_accumulation_steps: 4
+  learning_rate: 1.5e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.10
+  lr_scheduler_type: "cosine"
+  max_steps: 40000
+  eval_steps: 1000
+  save_steps: 5000
+  logging_steps: 100
+  early_stopping_patience: 8
+  early_stopping_threshold: 0.0005
+  fp16: true
+  gradient_checkpointing: false
+  max_grad_norm: 1.0
+  label_smoothing: 0.05
+
+data:
+  dataset_name: "McAuley-Lab/Amazon-Reviews-2023"
+  subsets:
+    - "raw_review_Electronics"
+    - "raw_review_Books"
+    - "raw_review_Clothing_Shoes_and_Jewelry"
+    - "raw_review_Home_and_Kitchen"
+  train_samples: 1500000
+  eval_samples: 25000
+  test_samples: 25000
+  num_workers: 4
+
+class_balancing:
+  sampling_strategy: "gentle"
+  loss_type: "hybrid"
+  loss_alpha: 1.0
+  loss_beta: 0.4
+  loss_gamma: 0.2
+
+paths:
+  checkpoint_dir: "checkpoints"
+  results_dir: "results"
+  logs_dir: "logs"
+
+seed: 42
