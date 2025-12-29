@@ -25,3 +25,45 @@ def print_gpu_info():
         print(f"Memory: {allocated:.2f} GB allocated, {reserved:.2f} GB reserved")
     else:
         print("No GPU available")
+
+def get_system_stats():
+    """
+    Returns a dict with CPU/RAM/GPU utilization.
+    Safe: returns partial stats if some libs aren't installed.
+    """
+    stats = {}
+
+    # CPU/RAM
+    try:
+        import psutil
+        stats["cpu_pct"] = psutil.cpu_percent(interval=None)
+        vm = psutil.virtual_memory()
+        stats["ram_pct"] = vm.percent
+        stats["ram_gb_used"] = vm.used / (1024**3)
+        stats["ram_gb_total"] = vm.total / (1024**3)
+    except Exception:
+        pass
+
+    # GPU (NVML)
+    try:
+        import pynvml
+        pynvml.nvmlInit()
+        h = pynvml.nvmlDeviceGetHandleByIndex(0)
+        util = pynvml.nvmlDeviceGetUtilizationRates(h)
+        mem = pynvml.nvmlDeviceGetMemoryInfo(h)
+        stats["gpu_util_pct"] = util.gpu
+        stats["gpu_mem_gb_used"] = mem.used / (1024**3)
+        stats["gpu_mem_gb_total"] = mem.total / (1024**3)
+    except Exception:
+        pass
+
+    # Torch memory (useful even if NVML fails)
+    try:
+        import torch
+        if torch.cuda.is_available():
+            stats["torch_mem_gb_alloc"] = torch.cuda.memory_allocated() / (1024**3)
+            stats["torch_mem_gb_reserved"] = torch.cuda.memory_reserved() / (1024**3)
+    except Exception:
+        pass
+
+    return stats

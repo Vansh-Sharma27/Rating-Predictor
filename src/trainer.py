@@ -6,6 +6,7 @@ from torch.amp import autocast, GradScaler
 from tqdm import tqdm
 from transformers import get_scheduler
 from .metrics import RatingMetrics
+from .utils import get_system_stats
 
 class Trainer:
     def __init__(self, model, tokenizer, loss_fn, config, device="cuda"):
@@ -182,7 +183,26 @@ class Trainer:
                 if self.global_step % self.log_steps == 0:
                     avg = running / self.log_steps
                     lr = self.scheduler.get_last_lr()[0]
-                    pbar.set_postfix({"loss": f"{avg:.4f}", "lr": f"{lr:.2e}"})
+                    #pbar.set_postfix({"loss": f"{avg:.4f}", "lr": f"{lr:.2e}"})
+                    stats = get_system_stats()
+                    postfix = {
+                        "loss": f"{avg:.4f}",
+                        "lr": f"{lr:.2e}",
+                    }
+
+                    # Add GPU stats if available
+                    if "gpu_util_pct" in stats:
+                        postfix["gpu%"] = f"{stats['gpu_util_pct']}"
+                    if "gpu_mem_gb_used" in stats and "gpu_mem_gb_total" in stats:
+                        postfix["vram"] = f"{stats['gpu_mem_gb_used']:.1f}/{stats['gpu_mem_gb_total']:.0f}G"
+
+                    # Add CPU/RAM stats if available
+                    if "cpu_pct" in stats:
+                        postfix["cpu%"] = f"{stats['cpu_pct']:.0f}"
+                    if "ram_pct" in stats:
+                        postfix["ram%"] = f"{stats['ram_pct']:.0f}"
+
+                    pbar.set_postfix(postfix)
                     self.training_log.append({"step": self.global_step, "loss": avg, "lr": lr})
                     running = 0.0
 
