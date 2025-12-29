@@ -78,5 +78,15 @@ Edit `config.yaml` to change:
 - dataset domains
 - sample counts (train/val/test)
 
+## Storage (portable by default)
+By default, the project writes artifacts to local folders:
+- `checkpoints/`, `results/`, `data/`, `logs/`
+
+For large runs on cloud VMs, you can optionally move caches/artifacts to a larger disk by setting:
+- `HF_HOME`, `HF_DATASETS_CACHE`, `TORCH_HOME`, `XDG_CACHE_HOME`
+or by symlinking `checkpoints/ data/ results/ logs/` to another mount.
+
+None of this is required for small runs.
+
 ## License / Notes
 This repo does not redistribute the Amazon dataset. It downloads via Hugging Face at runtime.
