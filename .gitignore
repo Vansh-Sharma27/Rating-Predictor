@@ -1,55 +1,42 @@
 # ===== Python =====
 __pycache__/
 *.py[cod]
-*$py.class
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-.pyre/
-*.egg-info/
-build/
-dist/
 
-# ===== Notebooks =====
-.ipynb_checkpoints/
-
-# ===== Environments / secrets =====
+# ===== Envs / secrets =====
 .env
 .env.*
 .venv/
 venv/
-.conda/
 conda-bld/
+*.conda
+*.tar.bz2
 
-# ===== IDE =====
+# ===== Editors / OS =====
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 
-# ===== Logs =====
-*.log
-logs/
-
-# ===== ML artifacts (never commit) =====
-checkpoints/
-results/
-data/
-models/
+# ===== Runtime artifacts (never commit) =====
+checkpoints
+data
+logs
+results
+models
 *.pt
 *.pth
 *.bin
 *.safetensors
 *.onnx
+*.log
 
-# ===== Hugging Face / caches =====
-.cache/
-hf/
-datasets/
-transformers/
-wandb/
-mlruns/
-
-# ===== OS/temp =====
-tmp/
-temp/
+# ===== HF / caches =====
+.cache
+hf
+datasets
+transformers
+wandb
+mlruns
