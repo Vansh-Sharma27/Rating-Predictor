@@ -1,20 +1,55 @@
+# ===== Python =====
 __pycache__/
-*.pyc
-.venv/
-.env
-.vscode/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+*.egg-info/
+build/
+dist/
 
-# artifacts + data (these are symlinks to /ephemeral)
-data/
+# ===== Notebooks =====
+.ipynb_checkpoints/
+
+# ===== Environments / secrets =====
+.env
+.env.*
+.venv/
+venv/
+.conda/
+conda-bld/
+
+# ===== IDE =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== ML artifacts (never commit) =====
 checkpoints/
 results/
-logs/
+data/
+models/
 *.pt
+*.pth
 *.bin
 *.safetensors
+*.onnx
 
-# caches (kept on /ephemeral)
+# ===== Hugging Face / caches =====
 .cache/
 hf/
 datasets/
 transformers/
+wandb/
+mlruns/
+
+# ===== OS/temp =====
+tmp/
+temp/
