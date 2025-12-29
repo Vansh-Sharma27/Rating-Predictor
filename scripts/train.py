@@ -16,6 +16,7 @@ from src.preprocessing import ReviewPreprocessor
 from src.model import RatingPredictor
 from src.balancing import ClassBalancer, HybridLoss
 from src.trainer import Trainer
+from tqdm import tqdm
 
 class ReviewDataset(Dataset):
     def __init__(self, data): self.data = data
@@ -51,18 +52,35 @@ def collect_domain(cfg, subset, per_class_target, seed):
     pre = ReviewPreprocessor()
     buckets = defaultdict(list)
 
+    total_target = per_class_target * 5
+    pbar = tqdm(total=total_target, desc=f"Collecting {category}", dynamic_ncols=True)
+
     for idx in iter_pseudorandom_indices(n, seed):
         if have_enough(buckets, per_class_target):
             break
+
         row = dict(ds[idx])
         row["category"] = category
         ex = pre.process_row(row)
         if ex is None:
             continue
+
         y = ex["label"]
         if len(buckets[y]) < per_class_target:
             buckets[y].append(ex)
+            pbar.update(1)
 
+            # update postfix occasionally (avoid slowing down too much)
+            if pbar.n % 2000 == 0:
+                pbar.set_postfix({
+                    "1⭐": len(buckets[0]),
+                    "2⭐": len(buckets[1]),
+                    "3⭐": len(buckets[2]),
+                    "4⭐": len(buckets[3]),
+                    "5⭐": len(buckets[4]),
+                })
+
+    pbar.close()
     return category, buckets
 
 def load_training_data(cfg):
