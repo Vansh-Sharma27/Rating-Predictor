@@ -23,21 +23,46 @@ Key ideas:
 ## Data pipeline
 Dataset: `McAuley-Lab/Amazon-Reviews-2023` (Hugging Face)
 
-To avoid class imbalance and domain bias, training data is sampled with **dual balancing**:
+To reduce class imbalance and domain bias, training data is sampled with **dual balancing**:
 - 4 domains: Electronics, Books, Clothing/Shoes/Jewelry, Home/Kitchen
 - 5 rating classes
 - equal samples **per-class-per-domain** (config-driven)
 
-Artifacts (data/checkpoints/results/logs) are stored outside git (recommended: on ephemeral disk).
+Validation/test sets are also generated as balanced splits so that macro-F1 is meaningful and classes are comparable.
 
-## Results (example run)
-Test set: 25k balanced samples (5k per class)
-- Accuracy: ~0.685
-- Macro-F1: ~0.684
+Artifacts (data/checkpoints/results/logs) are stored outside git (recommended: on a larger disk for large runs).
+
+## Final Results (Baseline)
+**Validation (25k balanced samples):**
+- Accuracy: **0.7078**
+- Macro-F1: **0.7066**
+
+**Test (25k balanced samples):**
+- Accuracy: **0.6847**
+- Macro-F1: **0.6835**
+
+Additional quality signals (typical for the baseline):
 - Off-by-one accuracy: ~0.97
 - MAE: ~0.35 stars
 
-(Exact numbers depend on seed/config.)
+## Experiments tried (no net gain on test)
+These were tested with a clean protocol (tune on validation, test once):
+
+1) **Ordinal post-processing / gating** (argmax vs rounded expected rating)
+- No meaningful improvement in exact 5-class test accuracy.
+
+2) **Stacker models on transformer outputs** (LogReg / HistGradientBoosting over probs + uncertainty + simple text features)
+- Example test: Accuracy **0.6837**, Macro-F1 **0.6820** (worse than baseline).
+
+3) **Ordinal-aware training loss (EMD / Wasserstein term)**
+- No validation gain over baseline (best val Macro-F1 ~0.7025 in the run shown).
+
+4) **Leakage-safe metadata (verified_purchase only)**
+- Example test: Accuracy **0.6828**, Macro-F1 **0.6838** (no gain).
+
+## Key takeaways
+- Most errors are **off-by-one** (e.g., 4★ predicted as 5★), which indicates the model learns strong ordinal structure but exact boundaries between adjacent ratings remain difficult.
+- The hardest classes are typically **2★ / 3★ / 4★** due to language ambiguity.
 
 ## Repo structure
 - `config.yaml` — all hyperparameters and dataset settings
@@ -50,7 +75,7 @@ Test set: 25k balanced samples (5k per class)
 ## Setup (GPU, Conda)
 1) Create env and install deps (example):
 - PyTorch GPU build (CUDA-enabled)
-- transformers, datasets, accelerate, etc.
+- `transformers`, `datasets`, `accelerate`, etc.
 
 2) Important GPU note:
 If PyTorch reports no GPU but `nvidia-smi` works, check MIG mode:
@@ -64,6 +89,10 @@ From repo root:
 
 2) Train (recommended inside tmux):
 `python scripts/train.py`
+
+Optional useful flags for experiments:
+- `--run-name <name>` to write artifacts under `checkpoints/<name>/` and `results/<name>/`
+- `--init-from <checkpoint.pt>` to initialize weights from a prior run
 
 3) Evaluate:
 `python scripts/evaluate.py`

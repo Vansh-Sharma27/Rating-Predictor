@@ -3,6 +3,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
+import argparse
 import os, json, math
 import random
 from collections import defaultdict
@@ -18,13 +19,21 @@ from src.balancing import ClassBalancer, HybridLoss
 from src.trainer import Trainer
 from tqdm import tqdm
 
+
 class ReviewDataset(Dataset):
-    def __init__(self, data): self.data = data
-    def __len__(self): return len(self.data)
-    def __getitem__(self, idx): return self.data[idx]
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
 
 def extract_category(subset_name: str) -> str:
-    return subset_name[11:].replace("_", " ") if subset_name.startswith("raw_review_") else subset_name.replace("_", " ")
+    return subset_name[11:].replace("_", " " ) if subset_name.startswith("raw_review_") else subset_name.replace("_", " " )
+
 
 def pick_stride(n: int) -> int:
     stride = 104729
@@ -34,6 +43,7 @@ def pick_stride(n: int) -> int:
         stride += 2
     return stride
 
+
 def iter_pseudorandom_indices(n: int, seed: int):
     rng = random.Random(seed)
     start = rng.randrange(n)
@@ -41,8 +51,10 @@ def iter_pseudorandom_indices(n: int, seed: int):
     for k in range(n):
         yield (start + k * stride) % n
 
+
 def have_enough(buckets, target, n_classes=5):
     return all(len(buckets[i]) >= target for i in range(n_classes))
+
 
 def collect_domain(cfg, subset, per_class_target, seed):
     category = extract_category(subset)
@@ -83,6 +95,7 @@ def collect_domain(cfg, subset, per_class_target, seed):
     pbar.close()
     return category, buckets
 
+
 def load_training_data(cfg):
     subsets = cfg["data"]["subsets"]
     domains = len(subsets)
@@ -114,9 +127,21 @@ def load_training_data(cfg):
     print(f"\nTotal training samples: {len(all_samples):,}")
     return list(all_samples), list(all_labels)
 
+
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--config", default="config.yaml")
+    ap.add_argument("--init-from", default=None, help="Optional path to a checkpoint (.pt) to initialize model weights from")
+    ap.add_argument("--run-name", default=None, help="Optional experiment name; appends to checkpoint/results/log dirs")
+    args = ap.parse_args()
+
     from src.utils import ensure_artifact_dirs
-    cfg = load_config("config.yaml")
+    cfg = load_config(args.config)
+
+    if args.run_name:
+        for k in ("checkpoint_dir", "results_dir", "logs_dir"):
+            cfg["paths"][k] = os.path.join(cfg["paths"][k], args.run_name)
+
     ensure_artifact_dirs(cfg)
     set_seed(cfg["seed"])
     print_gpu_info()
@@ -136,11 +161,14 @@ def main():
     balancer = ClassBalancer(train_labels, strategy=cfg["class_balancing"]["sampling_strategy"], n_classes=5)
     class_weights = balancer.class_weights.to(device)
 
+    cb = cfg["class_balancing"]
     loss_fn = HybridLoss(
         class_weights=class_weights,
-        alpha=cfg["class_balancing"]["loss_alpha"],
-        beta=cfg["class_balancing"]["loss_beta"],
-        gamma=cfg["class_balancing"]["loss_gamma"],
+        alpha=cb["loss_alpha"],
+        beta=cb["loss_beta"],
+        gamma=cb["loss_gamma"],
+        delta=cb.get("loss_delta", 0.0),
+        emd_p=cb.get("emd_p", 1),
         label_smoothing=cfg["training"]["label_smoothing"],
     )
 
@@ -155,6 +183,17 @@ def main():
         use_mean_pooling=cfg["model"]["use_mean_pooling"],
         gradient_checkpointing=cfg["training"]["gradient_checkpointing"],
     )
+
+    if args.init_from:
+        print(f"\nInitializing weights from: {args.init_from}")
+        ckpt = torch.load(args.init_from, map_location="cpu")
+        state = ckpt["model_state_dict"] if isinstance(ckpt, dict) and "model_state_dict" in ckpt else ckpt
+        try:
+            model.load_state_dict(state, strict=True)
+        except RuntimeError as e:
+            print(f"Strict load failed: {e}")
+            missing, unexpected = model.load_state_dict(state, strict=False)
+            print(f"Loaded with strict=False. Missing keys: {len(missing)}, unexpected keys: {len(unexpected)}")
 
     trainer = Trainer(model=model, tokenizer=tokenizer, loss_fn=loss_fn, config=cfg, device=device)
 
@@ -181,14 +220,19 @@ def main():
     print(f"Effective batch size: {eff_bs}")
 
     print("\n" + "=" * 70)
-    print("TRAINING V2 - HYBRID LOSS + MEAN POOLING + DUAL BALANCING")
+    print("TRAINING - HYBRID LOSS (+ optional EMD) + MEAN POOLING + DUAL BALANCING")
     print("=" * 70)
+    print(
+        f"Loss weights: alpha={cb['loss_alpha']} beta={cb['loss_beta']} gamma={cb['loss_gamma']} "
+        f"delta(emd)={cb.get('loss_delta', 0.0)} emd_p={cb.get('emd_p', 1)}"
+    )
 
     best_f1 = trainer.train(train_loader, val_loader)
 
     print("\n" + "=" * 70)
     print(f"TRAINING COMPLETE - Best F1 Macro: {best_f1:.4f}")
     print("=" * 70)
+
 
 if __name__ == "__main__":
     main()
