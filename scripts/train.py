@@ -115,7 +115,9 @@ def load_training_data(cfg):
     return list(all_samples), list(all_labels)
 
 def main():
+    from src.utils import ensure_artifact_dirs
     cfg = load_config("config.yaml")
+    ensure_artifact_dirs(cfg)
     set_seed(cfg["seed"])
     print_gpu_info()
 

@@ -81,7 +81,9 @@ def build_split(cfg, split_name, total_samples, seed, out_path):
     print(f"Saved {len(all_samples)} -> {out_path}")
 
 def main():
+    from src.utils import ensure_artifact_dirs
     cfg = load_config("config.yaml")
+    ensure_artifact_dirs(cfg)
     set_seed(cfg["seed"])
     build_split(cfg, "validation", cfg["data"]["eval_samples"], cfg["seed"], "data/val.json")
 

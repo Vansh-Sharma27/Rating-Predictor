@@ -2,6 +2,14 @@ import random
 import yaml
 import numpy as np
 import torch
+import os
+
+def ensure_artifact_dirs(cfg):
+    # Creates dirs if missing; works with real dirs or symlinks (if present).
+    os.makedirs(cfg["paths"]["checkpoint_dir"], exist_ok=True)
+    os.makedirs(cfg["paths"]["results_dir"], exist_ok=True)
+    os.makedirs(cfg["paths"]["logs_dir"], exist_ok=True)
+    os.makedirs("data", exist_ok=True)
 
 def set_seed(seed: int):
     random.seed(seed)

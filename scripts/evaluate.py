@@ -40,7 +40,9 @@ def run_eval(model, loader, device):
     return np.array(y_true), np.array(y_pred)
 
 def main():
+    from src.utils import ensure_artifact_dirs
     cfg = load_config("config.yaml")
+    ensure_artifact_dirs(cfg)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if not os.path.exists("data/test.json"):
